@@ -80,10 +80,10 @@ public class CrawlWorker implements Runnable {
                 String normalized = UrlUtils.normalize(absUrl);
                 if (normalized == null) continue;
 
-                String host = URI.create(normalized).getHost();
-                if (host == null || !host.equalsIgnoreCase(rootDomain)) continue;
+                boolean isNew = visited.add(normalized);
 
-                if (visited.add(normalized)) {
+                String host = URI.create(normalized).getHost();
+                if (host != null && host.equalsIgnoreCase(rootDomain) && isNew) {
                     queue.add(normalized);
                 }
             }

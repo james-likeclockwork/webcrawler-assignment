@@ -8,6 +8,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.common.util.concurrent.RateLimiter;
 
 import java.net.URI;
 import java.util.Set;
@@ -15,23 +16,30 @@ import java.util.concurrent.BlockingQueue;
 
 public class CrawlWorker implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(CrawlWorker.class);
-    private static final String USER_AGENT = "MyCrawlerBot";
 
     private final BlockingQueue<String> queue;
     private final Set<String> visited;
     private final RobotsHandler robotsHandler;
     private final String rootDomain;
+    private final String USER_AGENT;
+    private final RateLimiter rateLimiter;
+
 
     public CrawlWorker(
             BlockingQueue<String> queue,
             Set<String> visited,
             RobotsHandler robotsHandler,
-            String rootDomain
+            String rootDomain,
+            String USER_AGENT,
+            RateLimiter rateLimiter
+
     ) {
         this.queue = queue;
         this.visited = visited;
         this.robotsHandler = robotsHandler;
         this.rootDomain = rootDomain;
+        this.USER_AGENT = USER_AGENT;
+        this.rateLimiter = rateLimiter;
     }
 
     @Override
@@ -51,6 +59,8 @@ public class CrawlWorker implements Runnable {
     }
 
     private void processUrl(String url) {
+        rateLimiter.acquire();
+
         LOGGER.info("Crawling: {}", url);
 
         if (!robotsHandler.isAllowed(url)) {

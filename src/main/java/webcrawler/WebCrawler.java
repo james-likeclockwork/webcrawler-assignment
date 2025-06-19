@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.RateLimiter;
 import webcrawler.services.RobotsHandler;
 import webcrawler.utils.StorageUtils;
 import webcrawler.utils.UrlUtils;
@@ -42,11 +43,11 @@ public class WebCrawler {
         visited.add(normalized);
     }
 
-    public void crawl() throws InterruptedException {
+    public void crawl(RateLimiter rateLimiter) throws InterruptedException {
         ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
         try {
             for (int i = 0; i < maxThreads; i++) {
-                executor.submit(new CrawlWorker(queue, visited, robotsHandler, rootDomain));
+                executor.submit(new CrawlWorker(queue, visited, robotsHandler, rootDomain, USER_AGENT, rateLimiter));
             }
         } finally {
             executor.shutdown();
@@ -86,9 +87,10 @@ public class WebCrawler {
                 System.out.printf("Crawling %s with %d thread(s)...%n", inputUrl, threads);
                 try {
                     WebCrawler crawler = new WebCrawler(inputUrl, threads);
+                    RateLimiter rateLimiter = RateLimiter.create(1.0); // 1 request/sec
 
                     long startTime = System.nanoTime();
-                    crawler.crawl();
+                    crawler.crawl(rateLimiter);
                     long endTime = System.nanoTime();
 
                     long elapsedMillis = (endTime - startTime) / 1_000_000;
